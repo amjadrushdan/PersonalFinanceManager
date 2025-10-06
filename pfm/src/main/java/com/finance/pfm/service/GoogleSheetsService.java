@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,11 +30,7 @@ public class GoogleSheetsService {
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
     private Sheets getSheetsService() throws Exception {
-        InputStream in = getClass().getResourceAsStream("/credentials/pfm-service-account.json");
-
-        if (in == null) {
-            throw new IllegalStateException("Cannot find Google credentials file: " + credentialsPath);
-        }
+        InputStream in = new FileInputStream(System.getenv("GOOGLE_SERVICE_ACCOUNT_FILE"));
 
         GoogleCredentials credentials = GoogleCredentials.fromStream(in)
                 .createScoped(List.of(SheetsScopes.SPREADSHEETS));

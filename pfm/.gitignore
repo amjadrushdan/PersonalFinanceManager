@@ -34,10 +34,11 @@ Thumbs.db
 
 ### Env / Config ###
 # Secrets and keys
-application.properties
-application.yml
+# application.properties
+# application.yml
 .env
 .env.local
+pfm-service-account.json
 
 # Backup files
 *.bak

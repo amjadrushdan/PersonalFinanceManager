@@ -1,0 +1,4 @@
+google:
+  sheets:
+    credentials: ${GOOGLE_SERVICE_ACCOUNT_FILE}
+    spreadsheet-id: ${GOOGLE_SHEET_ID}
