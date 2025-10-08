@@ -69,14 +69,15 @@ public class GoogleDriveService {
             System.out.println("Open this URL in your browser:");
             System.out.println(authUrl);
             System.out.print("Enter the authorization code: ");
-            Scanner scanner = new Scanner(System.in);
-            String code = scanner.nextLine().trim();
+            try (Scanner scanner = new Scanner(System.in)) {
+                String code = scanner.nextLine().trim();
 
-            TokenResponse tokenResponse = flow.newTokenRequest(code)
-                    .setRedirectUri("urn:ietf:wg:oauth:2.0:oob")
-                    .execute();
+                TokenResponse tokenResponse = flow.newTokenRequest(code)
+                        .setRedirectUri("urn:ietf:wg:oauth:2.0:oob")
+                        .execute();
 
-            credential = flow.createAndStoreCredential(tokenResponse, "user");
+                credential = flow.createAndStoreCredential(tokenResponse, "user");
+            }
         }
 
         // Build Drive service
