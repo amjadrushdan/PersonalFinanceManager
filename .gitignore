@@ -1,2 +1,3 @@
 .vscode/settings.json
 pfm/deploy.ps1
+pfm/credentials/OAuth2-credential.json

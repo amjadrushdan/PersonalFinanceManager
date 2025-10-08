@@ -2,10 +2,17 @@ package com.finance.pfm.controller;
 
 import com.finance.pfm.config.TelegramBotConfig;
 import com.finance.pfm.service.GoogleSheetsService;
+import com.finance.pfm.service.GoogleDriveService;
 import jakarta.annotation.PostConstruct;
+
+import java.util.List;
+
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.File;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -14,11 +21,14 @@ public class TelegramBotController extends TelegramLongPollingBot {
 
     private final TelegramBotConfig config;
     private final GoogleSheetsService googleSheetsService;
+    private final GoogleDriveService googleDriveService;
 
-    public TelegramBotController(TelegramBotConfig config, GoogleSheetsService googleSheetsService) {
+
+    public TelegramBotController(TelegramBotConfig config, GoogleSheetsService googleSheetsService, GoogleDriveService googleDriveService) {
         super(config.getToken());
         this.config = config;
         this.googleSheetsService = googleSheetsService;
+        this.googleDriveService = googleDriveService;
         System.out.println("✅ TelegramBotController initialized for bot @" + config.getUsername());
     }
 
@@ -35,16 +45,19 @@ public class TelegramBotController extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+    String chatId = update.getMessage().getChatId().toString();
+
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String chatId = update.getMessage().getChatId().toString();
             String messageText = update.getMessage().getText().trim();
 
             if (messageText.equalsIgnoreCase("/start")) {
                 sendMessage(chatId, "👋 Hi! Use this format to log expenses:\nExample: `nasi lemak 5.50`");
             } else {
                 handleLogExpense(chatId, messageText);
-            }
-        }
+            }          
+        } else if (update.getMessage().hasPhoto()) {
+            handleReceiptImage(chatId, update);
+        }  
     }
 
     private void handleLogExpense(String chatId, String messageText) {
@@ -105,7 +118,27 @@ public class TelegramBotController extends TelegramLongPollingBot {
         }
     }
 
+    private void handleReceiptImage(String chatId, Update update) {
+        try {
+            List<PhotoSize> photos = update.getMessage().getPhoto();
+            PhotoSize photo = photos.get(photos.size() - 1); // highest resolution
 
+            // Download the file
+            org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(new GetFile(photo.getFileId()));
+            java.io.File localFile = new java.io.File("downloads/" + telegramFile.getFilePath());
+            downloadFile(telegramFile, localFile);
+
+            // Upload to Google Drive
+            googleDriveService.uploadFile(localFile);
+
+            sendMessage(chatId, "✅ Receipt uploaded to Google Drive: " + localFile.getName());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendMessage(chatId, "⚠️ Failed to upload receipt image.");
+        }
+    }
+    
     private void sendMessage(String chatId, String text) {
         SendMessage message = new SendMessage(chatId, text);
         try {
