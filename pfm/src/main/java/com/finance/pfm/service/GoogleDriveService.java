@@ -88,9 +88,12 @@ public class GoogleDriveService {
         ).setApplicationName(APPLICATION_NAME).build();
     }
 
-    public void uploadFile(java.io.File localFile) throws IOException {
+    public String uploadFile(java.io.File localFile, String timestamp) throws IOException {
+        String fileName = timestamp + ".jpg";
+
         File fileMetadata = new File();
-        fileMetadata.setName(localFile.getName());
+        fileMetadata.setName(fileName);
+
         if (folderId != null && !folderId.isEmpty()) {
             fileMetadata.setParents(Collections.singletonList(folderId));
         }
@@ -99,5 +102,8 @@ public class GoogleDriveService {
         driveService.files().create(fileMetadata, mediaContent)
                 .setFields("id, name, parents")
                 .execute();
+
+        return fileName; // return filename for confirmation message
     }
+
 }
