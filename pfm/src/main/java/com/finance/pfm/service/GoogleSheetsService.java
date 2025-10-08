@@ -21,55 +21,43 @@ import java.util.List;
 @Service
 public class GoogleSheetsService {
 
-    @Value("${google.sheets.credentials}")
-    private String credentialsPath;
+        @Value("${google.sheets.credentials}")
+        private String credentialsPath;
 
-    @Value("${google.sheets.spreadsheet-id}")
-    private String spreadsheetId;
+        @Value("${google.sheets.spreadsheet-id}")
+        private String spreadsheetId;
 
-    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
+        private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
-    private Sheets getSheetsService() throws Exception {
-        InputStream in = new FileInputStream(System.getenv("GOOGLE_SERVICE_ACCOUNT_FILE"));
+        private Sheets getSheetsService() throws Exception {
+                InputStream in = new FileInputStream(System.getenv("GOOGLE_SERVICE_ACCOUNT_FILE"));
 
-        GoogleCredentials credentials = GoogleCredentials.fromStream(in)
-                .createScoped(List.of(SheetsScopes.SPREADSHEETS));
+                GoogleCredentials credentials = GoogleCredentials.fromStream(in)
+                                .createScoped(List.of(SheetsScopes.SPREADSHEETS));
 
-        return new Sheets.Builder(
-                GoogleNetHttpTransport.newTrustedTransport(),
-                JSON_FACTORY,
-                new HttpCredentialsAdapter(credentials)
-        ).setApplicationName("PFM Bot").build();
-    }
+                return new Sheets.Builder(
+                                GoogleNetHttpTransport.newTrustedTransport(),
+                                JSON_FACTORY,
+                                new HttpCredentialsAdapter(credentials)).setApplicationName("PFM Bot").build();
+        }
 
-    // public void addExpense(String description, double amount) throws Exception {
-    //     Sheets sheets = getSheetsService();
+        public void addExpense(String date, String item, double amount, String merchant, String category)
+                        throws Exception {
+                Sheets sheets = getSheetsService();
 
-    //     ValueRange appendBody = new ValueRange().setValues(List.of(
-    //             List.of(LocalDate.now().toString(), description, amount)
-    //     ));
+                // Default values if null or empty
+                if (merchant == null)
+                        merchant = "";
+                if (category == null || category.isEmpty())
+                        category = "Other";
 
-    //     sheets.spreadsheets().values()
-    //             .append(spreadsheetId, "Sheet1!A:C", appendBody)
-    //             .setValueInputOption("USER_ENTERED")
-    //             .execute();
-    // }
-    @Autowired
-    private CategoryService categoryService;
+                ValueRange appendBody = new ValueRange().setValues(List.of(
+                                List.of(date, item, amount, merchant, category)));
 
-    public void addExpense(String description, double amount) throws Exception {
-        Sheets sheets = getSheetsService();
-        // String category = categoryService.classifyExpense(description);
-        String category = "Other"; // AI classification disabled
+                sheets.spreadsheets().values()
+                                .append(spreadsheetId, "Sheet1!A:E", appendBody)
+                                .setValueInputOption("USER_ENTERED")
+                                .execute();
+        }
 
-
-        ValueRange appendBody = new ValueRange().setValues(List.of(
-                List.of(LocalDate.now().toString(), description, amount, "", category)
-        ));
-
-        sheets.spreadsheets().values()
-                .append(spreadsheetId, "Sheet1!A:E", appendBody)
-                .setValueInputOption("USER_ENTERED")
-                .execute();
-    }
 }

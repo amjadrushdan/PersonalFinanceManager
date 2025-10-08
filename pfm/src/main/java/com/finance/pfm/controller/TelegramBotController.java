@@ -50,37 +50,61 @@ public class TelegramBotController extends TelegramLongPollingBot {
     private void handleLogExpense(String chatId, String messageText) {
         try {
             // Normalize input
-            String input = messageText.toLowerCase().trim();
+            String input = messageText.trim();
 
-            // Regex to detect amount with or without "rm"
-            // Matches examples: "rm5", "5.00", "rm 12.5", "12.50"
+            // 1️⃣ Extract price (last numeric value, with or without "RM")
             java.util.regex.Pattern amountPattern = java.util.regex.Pattern.compile("(rm\\s*)?(\\d+(\\.\\d{1,2})?)");
             java.util.regex.Matcher matcher = amountPattern.matcher(input);
 
-            double amount = -1;
+            double price = -1;
             if (matcher.find()) {
-                amount = Double.parseDouble(matcher.group(2)); // group(2) = numeric part
+                price = Double.parseDouble(matcher.group(2));
             } else {
                 sendMessage(chatId, "⚠️ Couldn't detect an amount. Try formats like `nasi lemak 5.50` or `rm5`");
                 return;
             }
 
-            // Remove the amount (and 'rm') from the text to get description
-            String description = input.replace(matcher.group(), "").trim();
+            // 2️⃣ Extract @Merchant and #Category
+            java.util.regex.Pattern merchantPattern = java.util.regex.Pattern.compile("@(\\S+)");
+            java.util.regex.Pattern categoryPattern = java.util.regex.Pattern.compile("#(\\S+)");
 
-            if (description.isEmpty()) {
-                description = "(no description)";
-            }
+            java.util.regex.Matcher merchantMatcher = merchantPattern.matcher(input);
+            java.util.regex.Matcher categoryMatcher = categoryPattern.matcher(input);
 
-            // Log to Google Sheet
-            googleSheetsService.addExpense(description, amount);
-            sendMessage(chatId, "✅ Logged to Google Sheet:\n📝 " + description + "\n💰 RM" + amount);
+            String merchant = merchantMatcher.find() ? merchantMatcher.group(1) : "";
+            String category = categoryMatcher.find() ? categoryMatcher.group(1) : "";
+
+            // 3️⃣ Remove amount, @Merchant, #Category to get item description
+            String item = input.replaceAll("(rm\\s*)?\\d+(\\.\\d{1,2})?", "")
+                            .replaceAll("@\\S+", "")
+                            .replaceAll("#\\S+", "")
+                            .trim();
+
+            if (item.isEmpty()) item = "(no description)";
+
+            // 4️⃣ Date (current timestamp)
+            String date = java.time.LocalDate.now().toString();
+            
+            // 5️⃣ Log to Google Sheet
+            // You may need to update your GoogleSheetsService to accept merchant and category
+            googleSheetsService.addExpense(date, item, price, merchant, category);
+
+            // 6️⃣ Feedback to user
+            StringBuilder sb = new StringBuilder();
+            sb.append("✅ Logged to Google Sheet:\n");
+            sb.append("📝 Item: ").append(item).append("\n");
+            sb.append("💰 Price: RM").append(price).append("\n");
+            if (!merchant.isEmpty()) sb.append("🏪 Merchant: ").append(merchant).append("\n");
+            if (!category.isEmpty()) sb.append("📂 Category: ").append(category).append("\n");
+
+            sendMessage(chatId, sb.toString());
 
         } catch (Exception e) {
             e.printStackTrace();
-            sendMessage(chatId, "⚠️ Failed to log expense. Try something like:\n`nasi lemak 5.50` or `rm10 lunch`");
+            sendMessage(chatId, "⚠️ Failed to log expense. Try something like:\n`latte stroberi 7.5 @Taobin #Coffee`");
         }
     }
+
 
     private void sendMessage(String chatId, String text) {
         SendMessage message = new SendMessage(chatId, text);
