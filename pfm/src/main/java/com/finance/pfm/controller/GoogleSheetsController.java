@@ -23,17 +23,19 @@ public class GoogleSheetsController {
             @RequestParam double amount,
             @RequestParam(required = false) String merchant,
             @RequestParam(required = false) String category,
+            @RequestParam(required = false) String moneySource,
             @RequestParam(required = false) String date
     ) {
         try {
             // Default values
             if (merchant == null) merchant = "";
             if (category == null || category.isEmpty()) category = "Other";
+            if (moneySource == null || moneySource.isEmpty()) moneySource = "Cash";
             if (date == null || date.isEmpty()) {
                 date = java.time.LocalDate.now().toString(); // Only date, no time
             }
 
-            googleSheetsService.addExpense(date, item, amount, merchant, category);
+            googleSheetsService.addExpense(date, item, amount, merchant, category,moneySource);
 
             StringBuilder sb = new StringBuilder();
             sb.append("✅ Expense added:\n");
@@ -41,6 +43,7 @@ public class GoogleSheetsController {
             sb.append("💰 Price: RM").append(amount).append("\n");
             if (!merchant.isEmpty()) sb.append("🏪 Merchant: ").append(merchant).append("\n");
             if (!category.isEmpty()) sb.append("📂 Category: ").append(category).append("\n");
+            if (!moneySource.isEmpty()) sb.append("💳 Source: ").append(moneySource).append("\n");
 
             return sb.toString();
         } catch (Exception e) {
