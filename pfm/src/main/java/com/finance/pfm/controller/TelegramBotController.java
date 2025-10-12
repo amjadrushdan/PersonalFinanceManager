@@ -74,6 +74,7 @@ public class TelegramBotController extends TelegramLongPollingBot {
             String merchant = "";
             String category = "";
             Double price = null;
+            String moneySource = "";
 
             for (String token : tokens) {
                 // Merchant
@@ -84,6 +85,10 @@ public class TelegramBotController extends TelegramLongPollingBot {
                 else if (token.startsWith("#") && token.length() > 1) {
                     category = token.substring(1);
                 }
+                // Money source
+                else if (token.startsWith("!") && token.length() > 1) {
+                    moneySource = token.substring(1);
+                }                
                 // Price
                 else {
                     // remove "rm" if exists (e.g. rm5.50 or RM 7)
@@ -109,9 +114,9 @@ public class TelegramBotController extends TelegramLongPollingBot {
             String date = java.time.LocalDate.now().toString();
 
             // Log to Google Sheet
-            googleSheetsService.addExpense(date, item, price, merchant, category);
-            logger.info("[TelegramBot] Logged expense: item='{}', price={}, merchant='{}', category='{}', date={}",
-                    item, price, merchant, category, date);
+            googleSheetsService.addExpense(date, item, price, merchant, category, moneySource);
+            logger.info("[TelegramBot] Logged expense: item='{}', price={}, merchant='{}', category='{}',moneySource='{}', date={}",
+                    item, price, merchant ,category ,moneySource, date);
 
             // Feedback to user
             StringBuilder sb = new StringBuilder();
@@ -120,6 +125,7 @@ public class TelegramBotController extends TelegramLongPollingBot {
             sb.append("💰 Price: RM").append(price).append("\n");
             if (!merchant.isEmpty()) sb.append("🏪 Merchant: ").append(merchant).append("\n");
             if (!category.isEmpty()) sb.append("📂 Category: ").append(category).append("\n");
+            if (!moneySource.isEmpty()) sb.append("💳 Source: ").append(moneySource).append("\n");
 
             sendMessage(chatId, sb.toString());
             logger.info("[TelegramBot] Confirmation sent to chatId {}: {}", chatId, sb.toString().replace("\n", " | "));

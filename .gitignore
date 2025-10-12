@@ -12,3 +12,5 @@ pfm/docker/ollama-models/models/blobs/sha256-f4d24e9138dd4603380add165d2b0d970be
 pfm/docker/ollama-models/models/manifests/registry.ollama.ai/library/deepseek-r1/1.5b
 pfm/downloads/
 pfm/drive_to_vision/__pycache__/
+pfm/docker/ollama-models/models/blobs/
+pfm/docker/ollama-models/models/manifests/

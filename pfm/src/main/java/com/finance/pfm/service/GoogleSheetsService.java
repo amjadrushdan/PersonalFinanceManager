@@ -39,8 +39,7 @@ public class GoogleSheetsService {
                                 new HttpCredentialsAdapter(credentials)).setApplicationName("PFM Bot").build();
         }
 
-        public void addExpense(String date, String item, double amount, String merchant, String category)
-                        throws Exception {
+        public void addExpense(String date, String item, double amount, String merchant, String category , String moneySource) throws Exception {
                 Sheets sheets = getSheetsService();
 
                 // Default values if null or empty
@@ -48,9 +47,11 @@ public class GoogleSheetsService {
                         merchant = "";
                 if (category == null || category.isEmpty())
                         category = "Other";
+                if (moneySource == null || moneySource.isEmpty())
+                        moneySource = "Cash";
 
                 ValueRange appendBody = new ValueRange().setValues(List.of(
-                                List.of(date, item, amount, merchant, category)));
+                                List.of(date, item, amount, merchant, category ,moneySource)));
 
                 sheets.spreadsheets().values()
                                 .append(spreadsheetId, "Sheet1!A:E", appendBody)
