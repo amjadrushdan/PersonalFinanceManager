@@ -67,49 +67,53 @@ public class TelegramBotController extends TelegramLongPollingBot {
         try {
             logger.info("[TelegramBot] Received expense message from chatId {}: {}", chatId, messageText);
 
-            // Normalize input
             String input = messageText.trim();
+            String[] tokens = input.split("\\s+");
 
-            // 1️⃣ Extract price (last numeric value, with or without "RM")
-            java.util.regex.Pattern amountPattern = java.util.regex.Pattern.compile("(rm\\s*)?(\\d+(\\.\\d{1,2})?)");
-            java.util.regex.Matcher matcher = amountPattern.matcher(input);
+            StringBuilder itemBuilder = new StringBuilder();
+            String merchant = "";
+            String category = "";
+            Double price = null;
 
-            double price = -1;
-            if (matcher.find()) {
-                price = Double.parseDouble(matcher.group(2));
-            } else {
+            for (String token : tokens) {
+                // Merchant
+                if (token.startsWith("@") && token.length() > 1) {
+                    merchant = token.substring(1);
+                }
+                // Category
+                else if (token.startsWith("#") && token.length() > 1) {
+                    category = token.substring(1);
+                }
+                // Price
+                else {
+                    // remove "rm" if exists (e.g. rm5.50 or RM 7)
+                    String normalized = token.toLowerCase().replace("rm", "").trim();
+                    try {
+                        price = Double.parseDouble(normalized);
+                    } catch (NumberFormatException e) {
+                        // not numeric, part of item description
+                        itemBuilder.append(token).append(" ");
+                    }
+                }
+            }
+
+            String item = itemBuilder.toString().trim();
+            if (item.isEmpty()) item = "(no description)";
+
+            if (price == null) {
                 sendMessage(chatId, "⚠️ Couldn't detect an amount. Try formats like `nasi lemak 5.50` or `rm5`");
                 logger.warn("[TelegramBot] Could not detect price in message: {}", messageText);
                 return;
             }
 
-            // 2️⃣ Extract @Merchant and #Category
-            java.util.regex.Pattern merchantPattern = java.util.regex.Pattern.compile("@(\\S+)");
-            java.util.regex.Pattern categoryPattern = java.util.regex.Pattern.compile("#(\\S+)");
-
-            java.util.regex.Matcher merchantMatcher = merchantPattern.matcher(input);
-            java.util.regex.Matcher categoryMatcher = categoryPattern.matcher(input);
-
-            String merchant = merchantMatcher.find() ? merchantMatcher.group(1) : "";
-            String category = categoryMatcher.find() ? categoryMatcher.group(1) : "";
-
-            // 3️⃣ Remove amount, @Merchant, #Category to get item description
-            String item = input.replaceAll("(rm\\s*)?\\d+(\\.\\d{1,2})?", "")
-                            .replaceAll("@\\S+", "")
-                            .replaceAll("#\\S+", "")
-                            .trim();
-
-            if (item.isEmpty()) item = "(no description)";
-
-            // 4️⃣ Date (current timestamp)
             String date = java.time.LocalDate.now().toString();
 
-            // 5️⃣ Log to Google Sheet
+            // Log to Google Sheet
             googleSheetsService.addExpense(date, item, price, merchant, category);
             logger.info("[TelegramBot] Logged expense: item='{}', price={}, merchant='{}', category='{}', date={}",
-                        item, price, merchant, category, date);
+                    item, price, merchant, category, date);
 
-            // 6️⃣ Feedback to user
+            // Feedback to user
             StringBuilder sb = new StringBuilder();
             sb.append("✅ Logged to Google Sheet:\n");
             sb.append("📝 Item: ").append(item).append("\n");
@@ -125,6 +129,7 @@ public class TelegramBotController extends TelegramLongPollingBot {
             sendMessage(chatId, "⚠️ Failed to log expense. Try something like:\n`latte stroberi 7.5 @Taobin #Coffee`");
         }
     }
+
 
     private void handleReceiptImage(String chatId, Update update) {
         java.io.File localFile = null;
